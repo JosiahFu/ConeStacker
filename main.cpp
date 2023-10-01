@@ -49,13 +49,12 @@ int main(void)
 
     DisableCursor();                    // Limit cursor to relative movement inside the window
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
-    SetCameraMode(camera, CAMERA_FREE);
     
     // Main game loop
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
         // Update
-        UpdateCamera(&camera);
+        UpdateCamera(&camera, CAMERA_ORBITAL);
         
         if (IsKeyPressed(KEY_SPACE)) {
             if (fail) {

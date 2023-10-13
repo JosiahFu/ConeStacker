@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "raygui.h"
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -63,7 +64,7 @@ int main(void)
         // Update
         UpdateCamera(&camera, CAMERA_ORBITAL);
         
-        
+        // Update controls
         switch(gameState) {
             case GAME_OVER:
                 if (IsKeyPressed(KEY_SPACE)) {

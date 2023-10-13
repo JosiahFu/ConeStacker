@@ -14,6 +14,12 @@ void DrawTextCentered(const char* text, int posX, int posY, int fontSize, Color 
     DrawText(text, posX-(textWidth/2), posY, fontSize, color);
 }
 
+enum GameState {
+    PLAY,
+    GAME_OVER,
+    MAIN_MENU
+};
+
 // Program main entry point
 int main(void)
 {
@@ -26,6 +32,7 @@ int main(void)
     SetWindowIcon(windowIcon);
     
     InitAudioDevice();
+    Sound coneFall = LoadSound("resources/coneFall.ogg");
     Sound coneDrop = LoadSound("resources/coneDrop.ogg");
     
     // Define the camera to look into our 3d world
@@ -42,7 +49,7 @@ int main(void)
     float floatingConeHoverDistance = 4.0f;
     float floatingConeFallSpeed = 0.0f;
     bool floatingConeToRight = true;
-    bool fail = false;
+    GameState gameState = PLAY;
     
     std::vector<Vector3> coneYs;
     coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
@@ -56,56 +63,60 @@ int main(void)
         // Update
         UpdateCamera(&camera, CAMERA_ORBITAL);
         
-        if (IsKeyPressed(KEY_SPACE)) {
-            if (fail) {
-                fail = false;
-                coneYs.clear();
-                coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
-                floatingConeX = 0.0f;
-                floatingConeSpeed = 0.2f;
-                floatingConeFallSpeed = 0.0f;
-                camera.fovy = 45.0f;
-                camera.target = coneYs.back();
-                targetFov = 45.0f;
-                floatingConeHoverDistance = 4.0f;
-            } 
-            else {
-                if (floatingConeX < 2.0f && floatingConeX > -2.0f) {
-                    coneYs.push_back((Vector3) {0.0f, coneYs.back().y + 1.0f, 0.0f});
-                    
-                    camera.target = coneYs.back();
-                    if (targetFov < 90.0f) {
-                        targetFov += 1.0f;
-                    }
-                    
-                    floatingConeX = 0.0f;
-                    if (floatingConeSpeed < 1.0f) {
-                        floatingConeSpeed += 0.025f;
-                    }
-                }
-                else {
-                    fail = true;
-                    PlaySound(coneDrop);
-                }
-            }
-        }
         
-        if (!fail) {
-            if (floatingConeToRight) {
-                floatingConeX += floatingConeSpeed;
-                if (floatingConeX >= 4.0f) {
-                    floatingConeToRight = false;
+        switch(gameState) {
+            case GAME_OVER:
+                if (IsKeyPressed(KEY_SPACE)) {
+                    gameState = PLAY;
+                    coneYs.clear();
+                    coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
+                    floatingConeX = 0.0f;
+                    floatingConeSpeed = 0.2f;
+                    floatingConeFallSpeed = 0.0f;
+                    camera.fovy = 45.0f;
+                    camera.target = coneYs.back();
+                    targetFov = 45.0f;
+                    floatingConeHoverDistance = 4.0f;
                 }
-            } else {
-                floatingConeX -= floatingConeSpeed;
-                if (floatingConeX <= -4.0f) {
-                    floatingConeToRight = true;
+                floatingConeFallSpeed += 0.01f;
+                floatingConeHoverDistance -= floatingConeFallSpeed;
+                camera.target = (Vector3){floatingConeX, coneYs.back().y + floatingConeHoverDistance, 0.0f};
+                break;
+            case PLAY:
+                if (IsKeyPressed(KEY_SPACE)) {
+                    if (floatingConeX < 2.0f && floatingConeX > -2.0f) {
+                        coneYs.push_back((Vector3) {0.0f, coneYs.back().y + 1.0f, 0.0f});
+                        
+                        camera.target = coneYs.back();
+                        if (targetFov < 90.0f) {
+                            targetFov += 1.0f;
+                        }
+                        
+                        floatingConeX = 0.0f;
+                        if (floatingConeSpeed < 1.0f) {
+                            floatingConeSpeed += 0.025f;
+                        }
+                        PlaySound(coneDrop);
+                    } else {
+                    gameState = GAME_OVER;
+                    PlaySound(coneFall);
+                    }
                 }
-            }
-        } else {
-            floatingConeFallSpeed += 0.01f;
-            floatingConeHoverDistance -= floatingConeFallSpeed;
-            camera.target = (Vector3){floatingConeX, coneYs.back().y + floatingConeHoverDistance, 0.0f};
+                
+                if (floatingConeToRight) {
+                    floatingConeX += floatingConeSpeed;
+                    if (floatingConeX >= 4.0f) {
+                        floatingConeToRight = false;
+                    }
+                } else {
+                    floatingConeX -= floatingConeSpeed;
+                    if (floatingConeX <= -4.0f) {
+                        floatingConeToRight = true;
+                    }
+                }
+                break;
+            case MAIN_MENU:
+                break;
         }
         
         if (targetFov > camera.fovy) {
@@ -127,13 +138,19 @@ int main(void)
 
             EndMode3D();
             
-            if (fail) {
-                DrawTextCentered("Game Over", screenWidth/2, screenHeight/2-25, 50, BLACK);
-                DrawTextCentered(("Score: " + std::to_string(coneYs.size()-1)).c_str(), screenWidth/2, screenHeight/2+25, 25, BLACK);
-                DrawTextCentered("Press Space To Play Again", screenWidth/2, screenHeight/2+75, 25, BLACK);
-            } else {
-                DrawTextCentered(std::to_string(coneYs.size()-1).c_str(), screenWidth/2, 10, 50, BLACK);
+            switch(gameState) {
+                case GAME_OVER:
+                    DrawTextCentered("Game Over", screenWidth/2, screenHeight/2-25, 50, BLACK);
+                    DrawTextCentered(("Score: " + std::to_string(coneYs.size()-1)).c_str(), screenWidth/2, screenHeight/2+25, 25, BLACK);
+                    DrawTextCentered("Press Space To Play Again", screenWidth/2, screenHeight/2+75, 25, BLACK);
+                    break;
+                case PLAY:
+                    DrawTextCentered(std::to_string(coneYs.size()-1).c_str(), screenWidth/2, 10, 50, BLACK);
+                    break;
+                case MAIN_MENU:
+                    break;
             }
+            
         EndDrawing();
         
     }

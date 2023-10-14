@@ -1,6 +1,6 @@
 # Object Export From Tinkercad Server 2015
 
-mtllib coneMaterial.mtl
+mtllib obj.mtl
 
 o obj_0
 v 16 		-17 		1

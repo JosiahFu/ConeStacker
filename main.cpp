@@ -7,16 +7,6 @@
 #include <algorithm>
 #include <string>
 
-void DrawCone(Vector3 position) {
-    static Model coneModel = LoadModel("resources/coneModel.obj");
-    
-    DrawModelEx(coneModel, position, (Vector3){1.0f, 0.0f, 0.0f}, -90.0f, (Vector3){0.2f, 0.2f, 0.2f}, WHITE); // Draw cone
-}
-
-void DrawTextCentered(const char* text, int posX, int posY, int fontSize, Color color) {
-    int textWidth = MeasureText(text, fontSize);
-    DrawText(text, posX-(textWidth/2), posY, fontSize, color);
-}
 
 struct FloatingCone {
     float x;
@@ -25,6 +15,59 @@ struct FloatingCone {
     float fallSpeed;
     bool toRight;
 };
+
+struct GameSettings {
+    int coneColor;
+    float sfxVolume;
+};
+
+enum GameState {
+    PLAY,
+    GAME_OVER,
+    MAIN_MENU,
+    OPTIONS,
+    LEADER_BOARD,
+};
+
+enum ConeColor {
+    CONE_TRAFFIC,
+    CONE_YELLOW,
+    CONE_ORANGE,
+    CONE_BLUE
+};
+
+
+void DrawCone(Vector3 position, int color) {
+    static Model trafficConeModel = LoadModel("resources/trafficCone/tinker.obj");
+    static Model yellowConeModel = LoadModel("resources/yellowCone/tinker.obj");
+    static Model orangeConeModel = LoadModel("resources/orangeCone/tinker.obj");
+    static Model blueConeModel = LoadModel("resources/blueCone/tinker.obj");
+    
+    Model model;
+    
+    switch(color) {
+        case CONE_YELLOW:
+            model = yellowConeModel;
+            break;
+        case CONE_ORANGE:
+            model = orangeConeModel;
+            break;
+        case CONE_BLUE:
+            model = blueConeModel;
+            break;
+        default:
+        case CONE_TRAFFIC:
+            model = trafficConeModel;
+            break;
+    }
+    
+    DrawModelEx(model, position, (Vector3){1.0f, 0.0f, 0.0f}, -90.0f, (Vector3){0.2f, 0.2f, 0.2f}, WHITE); // Draw cone
+}
+
+void DrawTextCentered(const char* text, int posX, int posY, int fontSize, Color color) {
+    int textWidth = MeasureText(text, fontSize);
+    DrawText(text, posX-(textWidth/2), posY, fontSize, color);
+}
 
 void ResetGame(std::vector<Vector3> &coneYs, Camera &camera, float &targetFov, FloatingCone &floatingCone) {
     coneYs.clear();
@@ -37,12 +80,6 @@ void ResetGame(std::vector<Vector3> &coneYs, Camera &camera, float &targetFov, F
     targetFov = 45.0f;
     floatingCone.hoverDistance = 4.0f;
 }
-
-enum GameState {
-    PLAY,
-    GAME_OVER,
-    MAIN_MENU
-};
 
 // Program main entry point
 int main(void)
@@ -72,16 +109,12 @@ int main(void)
     bool windowShouldClose = false;
     
     FloatingCone floatingCone;
-    floatingCone.x = 0.0f;
-    floatingCone.speed = 0.2f;
-    floatingCone.hoverDistance = 4.0f;
-    floatingCone.fallSpeed = 0.0f;
-    floatingCone.toRight = true;
-
+    GameSettings gameSettings;
+    gameSettings.coneColor = CONE_TRAFFIC;
     GameState gameState = MAIN_MENU;
-    
     std::vector<Vector3> coneYs;
-    coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
+    
+    ResetGame(coneYs, camera, targetFov, floatingCone);
     
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
     
@@ -93,12 +126,13 @@ int main(void)
         
         // Update controls
         switch(gameState) {
-            case GAME_OVER:
+            case GAME_OVER: {
                 floatingCone.fallSpeed += 0.01f;
                 floatingCone.hoverDistance -= floatingCone.fallSpeed;
                 camera.target = (Vector3){floatingCone.x, coneYs.back().y + floatingCone.hoverDistance, 0.0f};
                 break;
-            case PLAY:
+            }
+            case PLAY: {
                 if (IsKeyPressed(KEY_SPACE)) {
                     if (floatingCone.x < 2.0f && floatingCone.x > -2.0f) {
                         coneYs.push_back((Vector3) {0.0f, coneYs.back().y + 1.0f, 0.0f});
@@ -131,8 +165,10 @@ int main(void)
                     }
                 }
                 break;
-            case MAIN_MENU:
+            }
+            default: {
                 break;
+            }
         }
         
         if (targetFov > camera.fovy) {
@@ -148,19 +184,21 @@ int main(void)
                 
                 DrawCube((Vector3){1.5f, -5.0f, 1.5f}, 5.0f, 10.0f, 5.0f, GRAY);
                 
-                std::for_each(coneYs.begin(), coneYs.end(), DrawCone);
+                std::for_each (coneYs.begin(), coneYs.end(), [&](Vector3 coneY)
+                {
+                    DrawCone(coneY, gameSettings.coneColor);
+                });
                 
-                DrawCone((Vector3){floatingCone.x, coneYs.back().y + floatingCone.hoverDistance, 0.0f});
+                DrawCone((Vector3){floatingCone.x, coneYs.back().y + floatingCone.hoverDistance, 0.0f}, gameSettings.coneColor);
 
             EndMode3D();
             
-            GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
-            
             switch(gameState) {
-                case GAME_OVER:
+                case GAME_OVER: {
                     DrawTextCentered("Game Over", screenWidth/2, screenHeight/2-75, 50, BLACK);
                     DrawTextCentered(("Score: " + std::to_string(coneYs.size()-1)).c_str(), screenWidth/2, screenHeight/2-25, 25, BLACK);
                     //DrawTextCentered("Press Space To Play Again", screenWidth/2, screenHeight/2+75, 25, BLACK);
+                    GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+25, 200, 50}, "Play Again") == 1) {
                         gameState = PLAY;
                         ResetGame(coneYs, camera, targetFov, floatingCone);
@@ -171,19 +209,24 @@ int main(void)
                     };
                     
                     break;
-                case PLAY:
+                }
+                case PLAY: {
                     DrawTextCentered(std::to_string(coneYs.size()-1).c_str(), screenWidth/2, 10, 50, BLACK);
                     break;
-                case MAIN_MENU:
+                }
+                case MAIN_MENU: {
                     DrawTextCentered("Cone Stacker", screenWidth/2, screenHeight/2-125, 50, BLACK);
                     
+                    GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2-50, 200, 50}, "Play") == 1) {
                         gameState = PLAY;
                         ResetGame(coneYs, camera, targetFov, floatingCone);
                     };
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+10, 200, 50}, "Leaderboard") == 1) {
+                        gameState = LEADER_BOARD;
                     };
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+70, 200, 50}, "Options") == 1) {
+                        gameState = OPTIONS;
                     };
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+130, 200, 50}, "Exit") == 1) {
                         windowShouldClose = true;
@@ -191,8 +234,35 @@ int main(void)
                     
                     DrawText("Made by Gavin P", 5, screenHeight-20, 15, BLACK);
                     break;
+                }
+                case OPTIONS: {
+                    GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+                    
+                    GuiGroupBox((Rectangle){37, 50, 640, 400}, "Options");
+                    
+                    GuiLabel((Rectangle){62, 65, 120, 25}, "Cone Color");
+                    GuiToggleGroup((Rectangle){62, 90, 150, 25}, "Traffic;Yellow;Orange;Blue", &gameSettings.coneColor);
+                    
+                    GuiLabel((Rectangle) {207, 170, 100, 25}, "SFX Volume");
+                    GuiSliderBar((Rectangle){302, 175, 120, 16}, NULL, NULL, &gameSettings.sfxVolume, 0, 1);
+                    GuiLabel((Rectangle){432, 170, 35, 25}, (std::to_string((int)gameSettings.sfxVolume*100) + "%").c_str());
+                    
+                    SetSoundVolume(coneDrop, gameSettings.sfxVolume);
+                    SetSoundVolume(coneFall, gameSettings.sfxVolume);
+                    
+                    if (GuiButton((Rectangle){282, 410, 150, 25}, "Back to Main Menu") == 1) {
+                        gameState = MAIN_MENU;
+                    }
+                    break;
+                }
+                case LEADER_BOARD: {
+                    GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+                    if (GuiButton((Rectangle){282, 410, 150, 25}, "Back to Main Menu") == 1) {
+                        gameState = MAIN_MENU;
+                    }
+                    break;
+                }
             }
-            
         EndDrawing();
         
     }

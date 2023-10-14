@@ -1,5 +1,8 @@
 #include "raylib.h"
+
+#define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
+
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -13,6 +16,26 @@ void DrawCone(Vector3 position) {
 void DrawTextCentered(const char* text, int posX, int posY, int fontSize, Color color) {
     int textWidth = MeasureText(text, fontSize);
     DrawText(text, posX-(textWidth/2), posY, fontSize, color);
+}
+
+struct FloatingCone {
+    float x;
+    float speed;
+    float hoverDistance;
+    float fallSpeed;
+    bool toRight;
+};
+
+void ResetGame(std::vector<Vector3> &coneYs, Camera &camera, float &targetFov, FloatingCone &floatingCone) {
+    coneYs.clear();
+    coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
+    floatingCone.x = 0.0f;
+    floatingCone.speed = 0.2f;
+    floatingCone.fallSpeed = 0.0f;
+    camera.fovy = 45.0f;
+    camera.target = coneYs.back();
+    targetFov = 45.0f;
+    floatingCone.hoverDistance = 4.0f;
 }
 
 enum GameState {
@@ -45,21 +68,25 @@ int main(void)
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
     
     float targetFov = 45.0f;
-    float floatingConeX = 0.0f;
-    float floatingConeSpeed = 0.2f;
-    float floatingConeHoverDistance = 4.0f;
-    float floatingConeFallSpeed = 0.0f;
-    bool floatingConeToRight = true;
-    GameState gameState = PLAY;
+    
+    bool windowShouldClose = false;
+    
+    FloatingCone floatingCone;
+    floatingCone.x = 0.0f;
+    floatingCone.speed = 0.2f;
+    floatingCone.hoverDistance = 4.0f;
+    floatingCone.fallSpeed = 0.0f;
+    floatingCone.toRight = true;
+
+    GameState gameState = MAIN_MENU;
     
     std::vector<Vector3> coneYs;
     coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
-
-    DisableCursor();                    // Limit cursor to relative movement inside the window
+    
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
     
     // Main game loop
-    while (!WindowShouldClose())        // Detect window close button or ESC key
+    while (!WindowShouldClose() && !windowShouldClose)        // Detect window close button or ESC key
     {
         // Update
         UpdateCamera(&camera, CAMERA_ORBITAL);
@@ -67,25 +94,13 @@ int main(void)
         // Update controls
         switch(gameState) {
             case GAME_OVER:
-                if (IsKeyPressed(KEY_SPACE)) {
-                    gameState = PLAY;
-                    coneYs.clear();
-                    coneYs.push_back((Vector3){0.0f, 0.0f, 0.0f});
-                    floatingConeX = 0.0f;
-                    floatingConeSpeed = 0.2f;
-                    floatingConeFallSpeed = 0.0f;
-                    camera.fovy = 45.0f;
-                    camera.target = coneYs.back();
-                    targetFov = 45.0f;
-                    floatingConeHoverDistance = 4.0f;
-                }
-                floatingConeFallSpeed += 0.01f;
-                floatingConeHoverDistance -= floatingConeFallSpeed;
-                camera.target = (Vector3){floatingConeX, coneYs.back().y + floatingConeHoverDistance, 0.0f};
+                floatingCone.fallSpeed += 0.01f;
+                floatingCone.hoverDistance -= floatingCone.fallSpeed;
+                camera.target = (Vector3){floatingCone.x, coneYs.back().y + floatingCone.hoverDistance, 0.0f};
                 break;
             case PLAY:
                 if (IsKeyPressed(KEY_SPACE)) {
-                    if (floatingConeX < 2.0f && floatingConeX > -2.0f) {
+                    if (floatingCone.x < 2.0f && floatingCone.x > -2.0f) {
                         coneYs.push_back((Vector3) {0.0f, coneYs.back().y + 1.0f, 0.0f});
                         
                         camera.target = coneYs.back();
@@ -93,9 +108,9 @@ int main(void)
                             targetFov += 1.0f;
                         }
                         
-                        floatingConeX = 0.0f;
-                        if (floatingConeSpeed < 1.0f) {
-                            floatingConeSpeed += 0.025f;
+                        floatingCone.x = 0.0f;
+                        if (floatingCone.speed < 1.0f) {
+                            floatingCone.speed += 0.025f;
                         }
                         PlaySound(coneDrop);
                     } else {
@@ -104,15 +119,15 @@ int main(void)
                     }
                 }
                 
-                if (floatingConeToRight) {
-                    floatingConeX += floatingConeSpeed;
-                    if (floatingConeX >= 4.0f) {
-                        floatingConeToRight = false;
+                if (floatingCone.toRight) {
+                    floatingCone.x += floatingCone.speed;
+                    if (floatingCone.x >= 4.0f) {
+                        floatingCone.toRight = false;
                     }
                 } else {
-                    floatingConeX -= floatingConeSpeed;
-                    if (floatingConeX <= -4.0f) {
-                        floatingConeToRight = true;
+                    floatingCone.x -= floatingCone.speed;
+                    if (floatingCone.x <= -4.0f) {
+                        floatingCone.toRight = true;
                     }
                 }
                 break;
@@ -135,20 +150,46 @@ int main(void)
                 
                 std::for_each(coneYs.begin(), coneYs.end(), DrawCone);
                 
-                DrawCone((Vector3){floatingConeX, coneYs.back().y + floatingConeHoverDistance, 0.0f});
+                DrawCone((Vector3){floatingCone.x, coneYs.back().y + floatingCone.hoverDistance, 0.0f});
 
             EndMode3D();
             
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
+            
             switch(gameState) {
                 case GAME_OVER:
-                    DrawTextCentered("Game Over", screenWidth/2, screenHeight/2-25, 50, BLACK);
-                    DrawTextCentered(("Score: " + std::to_string(coneYs.size()-1)).c_str(), screenWidth/2, screenHeight/2+25, 25, BLACK);
-                    DrawTextCentered("Press Space To Play Again", screenWidth/2, screenHeight/2+75, 25, BLACK);
+                    DrawTextCentered("Game Over", screenWidth/2, screenHeight/2-75, 50, BLACK);
+                    DrawTextCentered(("Score: " + std::to_string(coneYs.size()-1)).c_str(), screenWidth/2, screenHeight/2-25, 25, BLACK);
+                    //DrawTextCentered("Press Space To Play Again", screenWidth/2, screenHeight/2+75, 25, BLACK);
+                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+25, 200, 50}, "Play Again") == 1) {
+                        gameState = PLAY;
+                        ResetGame(coneYs, camera, targetFov, floatingCone);
+                    };
+                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+85, 200, 50}, "Main Menu") == 1) {
+                        gameState = MAIN_MENU;
+                        ResetGame(coneYs, camera, targetFov, floatingCone);
+                    };
+                    
                     break;
                 case PLAY:
                     DrawTextCentered(std::to_string(coneYs.size()-1).c_str(), screenWidth/2, 10, 50, BLACK);
                     break;
                 case MAIN_MENU:
+                    DrawTextCentered("Cone Stacker", screenWidth/2, screenHeight/2-125, 50, BLACK);
+                    
+                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2-50, 200, 50}, "Play") == 1) {
+                        gameState = PLAY;
+                        ResetGame(coneYs, camera, targetFov, floatingCone);
+                    };
+                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+10, 200, 50}, "Leaderboard") == 1) {
+                    };
+                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+70, 200, 50}, "Options") == 1) {
+                    };
+                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+130, 200, 50}, "Exit") == 1) {
+                        windowShouldClose = true;
+                    };
+                    
+                    DrawText("Made by Gavin P", 5, screenHeight-20, 15, BLACK);
                     break;
             }
             

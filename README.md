@@ -1,5 +1,19 @@
 # ConeStacker
 
+## Building on Windows
+
+1. Install Raylib
+
+Download the official raylib installer and go through the install process:
+https://github.com/raysan5/raylib/releases/download/4.5.0/raylib_installer_v4.5.mingw.64bit.exe
+
+2. Install Raygui
+
+Download a zip of the repository:
+https://github.com/raysan5/raygui/releases/tag/4.0
+
+Extract to C:/raylib/raygui so that `raylib.h` is located at C:/raylib/raygui/src/raylib.h
+
 ## Building on Linux
 
 1. Install Raylib build dependencies

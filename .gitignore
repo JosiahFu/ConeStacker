@@ -1,4 +1,5 @@
 *.exe
 *.dsym
 main
+game
 /save/*

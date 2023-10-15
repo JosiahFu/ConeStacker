@@ -122,13 +122,13 @@ int scorePlacement(int score) {
 
 // Checks if a score is within the top 10 scores on the leaderboard
 bool checkScore(int score) {
-    return scorePlacement(score) <= 9;
+    return scorePlacement(score) < 10;
 }
 
 void saveScore(const char * name, int score) {
     std::stringstream sScoreFileEntry;
     
-    sScoreFileEntry << name << "," << std::to_string(score) << "," << std::to_string(std::time(0)) << std::endl;
+    sScoreFileEntry << name << "," << std::to_string(score) << "," << std::to_string(std::time(0));
     
     std::string scoreFileEntry = sScoreFileEntry.str();
     
@@ -142,7 +142,7 @@ void saveScore(const char * name, int score) {
         oScoreFile << ""; // Clears file
         
         for (std::string entry : scoreFileEntries) {
-            oScoreFile << entry;
+            oScoreFile << entry << std::endl;
         }
         
         close_oScoreFile();

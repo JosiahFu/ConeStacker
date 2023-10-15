@@ -116,6 +116,13 @@ int main(void)
     GameState gameState = MAIN_MENU;
     std::vector<Vector3> coneYs;
     
+    int score = 0;
+    bool highScoreEditMode = false;
+    char highScoreName[17] = "";
+    
+    std::vector<std::string> leaderboardNames;
+    std::vector<int> leaderboardScores;
+    
     ResetGame(coneYs, camera, targetFov, floatingCone);
     
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
@@ -151,6 +158,7 @@ int main(void)
                         PlaySound(coneDrop);
                     } else {
                     gameState = GAME_OVER;
+                    score = coneYs.size()-1;
                     PlaySound(coneFall);
                     }
                 }
@@ -198,17 +206,36 @@ int main(void)
             switch(gameState) {
                 case GAME_OVER: {
                     DrawTextCentered("Game Over", screenWidth/2, screenHeight/2-75, 50, BLACK);
-                    DrawTextCentered(("Score: " + std::to_string(coneYs.size()-1)).c_str(), screenWidth/2, screenHeight/2-25, 25, BLACK);
+                    DrawTextCentered(("Score: " + std::to_string(score)).c_str(), screenWidth/2, screenHeight/2-25, 25, BLACK);
                     //DrawTextCentered("Press Space To Play Again", screenWidth/2, screenHeight/2+75, 25, BLACK);
-                    GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
-                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+25, 200, 50}, "Play Again") == 1) {
-                        gameState = PLAY;
-                        ResetGame(coneYs, camera, targetFov, floatingCone);
-                    };
-                    if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+85, 200, 50}, "Main Menu") == 1) {
-                        gameState = MAIN_MENU;
-                        ResetGame(coneYs, camera, targetFov, floatingCone);
-                    };
+                    if (checkScore(score)) {
+                        DrawTextCentered("Enter your name to submit your high score", screenWidth/2, screenHeight/2+8, 16, BLACK);
+                        GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+                        if (GuiTextBox((Rectangle){screenWidth/2-60, screenHeight/2+32, 120, 24}, highScoreName, 16, highScoreEditMode)) {
+                            highScoreEditMode = !highScoreEditMode;
+                        }
+                        GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
+                        if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+75, 200, 50}, "Play Again") == 1) {
+                            gameState = PLAY;
+                            ResetGame(coneYs, camera, targetFov, floatingCone);
+                            saveScore(highScoreName, score);
+                        };
+                        if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+135, 200, 50}, "Main Menu") == 1) {
+                            gameState = MAIN_MENU;
+                            ResetGame(coneYs, camera, targetFov, floatingCone);
+                            saveScore(highScoreName, score);
+                        };
+                    } else {
+                        GuiSetStyle(DEFAULT, TEXT_SIZE, 25);
+                        if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+25, 200, 50}, "Play Again") == 1) {
+                            gameState = PLAY;
+                            ResetGame(coneYs, camera, targetFov, floatingCone);
+                        };
+                        if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+85, 200, 50}, "Main Menu") == 1) {
+                            gameState = MAIN_MENU;
+                            ResetGame(coneYs, camera, targetFov, floatingCone);
+                        };
+                    }
                     
                     break;
                 }
@@ -226,6 +253,10 @@ int main(void)
                     };
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+10, 200, 50}, "Leaderboard") == 1) {
                         gameState = LEADER_BOARD;
+                        leaderboardNames = getNames();
+                        if (leaderboardNames.size() > 10) leaderboardNames.erase(leaderboardNames.begin()+10, leaderboardNames.end());
+                        leaderboardScores = getScores();
+                        if (leaderboardScores.size() > 10) leaderboardScores.erase(leaderboardScores.begin()+10, leaderboardScores.end());
                     };
                     if (GuiButton((Rectangle) {screenWidth/2-100, screenHeight/2+70, 200, 50}, "Options") == 1) {
                         gameState = OPTIONS;
@@ -259,6 +290,29 @@ int main(void)
                 }
                 case LEADER_BOARD: {
                     GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+                    
+                    GuiGroupBox((Rectangle){37, 50, 640, 400}, "Leaderboard");
+                    
+                    GuiLabel((Rectangle){92, 65, 120, 25}, "Name");
+                    
+                    DrawLine(87, 65, 87, 400, BLACK);
+                    DrawLine(540, 65, 540, 400, BLACK);
+                    
+                    GuiLabel((Rectangle){545, 65, 120, 25}, "Score");
+                    
+                    DrawLine(62, 95, 640, 95, BLACK);
+                    
+                    float yValue = 100.0f;
+                    for (std::string name : leaderboardNames) {
+                        GuiLabel((Rectangle){92, yValue, 150, 25}, name.c_str());
+                        yValue += 30.0f;
+                    }
+                    yValue = 100.0f;
+                    for (int score : leaderboardScores) {
+                        GuiLabel((Rectangle){545, yValue, 150, 25}, std::to_string(score).c_str());
+                        yValue += 30.0f;
+                    }
+                    
                     if (GuiButton((Rectangle){282, 410, 150, 25}, "Back to Main Menu") == 1) {
                         gameState = MAIN_MENU;
                     }

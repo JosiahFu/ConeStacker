@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 
 struct FloatingCone {
@@ -18,7 +19,7 @@ struct FloatingCone {
 
 struct GameSettings {
     int coneColor;
-    float sfxVolume;
+    float sfxVolume = 1.0f;
 };
 
 enum GameState {
@@ -245,7 +246,7 @@ int main(void)
                     
                     GuiLabel((Rectangle) {207, 170, 100, 25}, "SFX Volume");
                     GuiSliderBar((Rectangle){302, 175, 120, 16}, NULL, NULL, &gameSettings.sfxVolume, 0, 1);
-                    GuiLabel((Rectangle){432, 170, 35, 25}, (std::to_string((int)gameSettings.sfxVolume*100) + "%").c_str());
+                    GuiLabel((Rectangle){432, 170, 35, 25}, (std::to_string((int)(gameSettings.sfxVolume*100)) + "%").c_str());
                     
                     SetSoundVolume(coneDrop, gameSettings.sfxVolume);
                     SetSoundVolume(coneFall, gameSettings.sfxVolume);

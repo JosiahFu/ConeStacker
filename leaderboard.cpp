@@ -1,4 +1,4 @@
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include <fstream>
 #include <sstream>
@@ -13,7 +13,7 @@ std::ifstream iScoreFile;
 const char * scoreFileLocation = "save/leaderboard";
 
 void open_oScoreFile() {
-    std::experimental::filesystem::create_directory("save");
+    std::filesystem::create_directory("save");
     
     oScoreFile = std::ofstream(scoreFileLocation);
 }
@@ -81,6 +81,50 @@ bool isScoreFileEmpty() {
     return isEmpty;
 }
 
+std::vector<std::string> getNames() {
+    return getScoreFileColumn(0);
+}
+
+std::vector<int> getScores() {
+    std::vector<int> scores;
+    
+    std::vector<std::string> scoreStrings = getScoreFileColumn(1);
+    
+    for (std::string scoreString : scoreStrings) {
+        scores.push_back(std::stoi(scoreString));
+    }
+    
+    return scores;
+}
+
+std::vector<int> getTimestamps() {
+    std::vector<int> scores;
+    
+    std::vector<std::string> scoreStrings = getScoreFileColumn(2);
+    
+    for (std::string scoreString : scoreStrings) {
+        scores.push_back(std::stoi(scoreString));
+    }
+    
+    return scores;
+}
+
+// Returns where a score would be placed if placed in the leaderboard
+int scorePlacement(int score) {
+    std::vector<int> scores = getScores();
+    
+    std::sort(scores.begin(), scores.end());
+    
+    std::vector<int>::iterator it = std::upper_bound(scores.begin(), scores.end(), score);
+    
+    return std::distance(scores.begin(), it);
+}
+
+// Checks if a score is within the top 10 scores on the leaderboard
+bool checkScore(int score) {
+    return scorePlacement(score) <= 9;
+}
+
 void saveScore(const char * name, int score) {
     std::stringstream sScoreFileEntry;
     
@@ -110,48 +154,4 @@ void saveScore(const char * name, int score) {
         
         close_oScoreFile();
     }
-}
-
-std::vector<std::string> getNames() {
-    return getScoreFileColumn(0);
-}
-
-std::vector<int> getScores() {
-    std::vector<int> scores;
-    
-    std::vector<std::string> scoreStrings = getScoreFileColumn(1);
-    
-    for (std::string scoreString : scoreStrings) {
-        scores.push_back((int)(scoreString.c_str()));
-    }
-    
-    return scores;
-}
-
-std::vector<int> getTimestamps() {
-    std::vector<int> scores;
-    
-    std::vector<std::string> scoreStrings = getScoreFileColumn(2);
-    
-    for (std::string scoreString : scoreStrings) {
-        scores.push_back((int)(scoreString.c_str()));
-    }
-    
-    return scores;
-}
-
-// Returns where a score would be placed if placed in the leaderboard
-int scorePlacement(int score) {
-    std::vector<int> scores = getScores();
-    
-    std::sort(scores.begin(), scores.end());
-    
-    std::vector<int>::iterator it = std::upper_bound(scores.begin(), scores.end(), score);
-    
-    return std::distance(scores.begin(), it);
-}
-
-// Checks if a score is within the top 10 scores on the leaderboard
-bool checkScore(int score) {
-    return scorePlacement(score) <= 9;
 }

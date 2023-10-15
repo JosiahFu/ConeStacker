@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 
+#include "leaderboard.h"
 
 struct FloatingCone {
     float x;

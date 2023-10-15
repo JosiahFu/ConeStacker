@@ -113,11 +113,15 @@ std::vector<int> getTimestamps() {
 int scorePlacement(int score) {
     std::vector<int> scores = getScores();
     
-    std::sort(scores.begin(), scores.end());
+    int index = 0;
     
-    std::vector<int>::iterator it = std::upper_bound(scores.begin(), scores.end(), score);
+    for (int i = 0; i < scores.size(); ++i) {
+        if (scores[i] > score) {
+            index = i + 1;
+        }
+    }
     
-    return std::distance(scores.begin(), it);
+    return index;
 }
 
 // Checks if a score is within the top 10 scores on the leaderboard
